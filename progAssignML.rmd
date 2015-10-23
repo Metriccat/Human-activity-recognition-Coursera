@@ -1,0 +1,82 @@
+---
+title: "Programming Assignment for the Practical Machine Learning course"
+author: "Saskia Bosma"
+date: "20 Oct 2015"
+output: html_document
+---
+
+This report uses the data from: Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013. It can be found at <http://groupware.les.inf.puc-rio.br/har#wle_paper_section#ixzz3p8ujiAbu>.
+
+The data was gathered from wearable activity tracking devices used by 6 individuals: accelerometers on the belt, forearm, arm, and dumbell. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways, and we will try to predict the barbell lift type (variable "classe") from the variables available in the dataset.
+
+Let's first load the data, and do basic exploration. The training dataset has 60 variables and 19622 cases.
+
+```{r, cache=T}
+training <- read.csv("pml-training.csv", na.strings = c("NA",""))
+testingSubmission <- read.csv("pml-testing.csv", na.strings = c("NA",""))
+dim(training)
+summary(training)
+#names(testingSubmission) == names(training)
+naPercent <- colSums(is.na(training)/dim(training)[1])
+```
+
+Colums in the training set have either zero NAs, or more than 95%. In a first approach, I just ignored the columns containing mostly NAs; this decreases the number of variables a lot (160 to 60). Those variables are also removed from the test set since they won't be used for prediction.
+
+```{r}
+training2 <- training[, naPercent < 0.95]
+n <- dim(training2)[2]
+testingSubmission2 <- testingSubmission[, names(training2)[1:n-1]]
+```
+
+The dataste spliting is done using the caret library, but for speed reasons caret was not used for training. The training data (for which outcome is known) is separated into train and cross-validation and test sets in order to respectively compare several models and estimate the out-of-sample error of the final selected model.
+
+```{r, message=F}
+library(caret)
+library(MASS)
+library(randomForest)
+
+split = createFolds(training2$classe, k=3) # distinct sets
+training3 <- training2[split[[1]],]
+crossValidation <- training2[split[[2]],]
+outOfSample <- training2[split[[3]],]
+
+# a LDA classifier
+trainLDA <- lda(classe~., data=training3)
+predLDA <- predict(trainLDA, crossValidation)
+# a random forest 
+trainF <- randomForest(classe~., data=training3) 
+predF <- predict(trainF, crossValidation)
+```
+
+Comparing the two methods to the cross-validation set:
+
+```{r}
+table(predLDA$class, crossValidation$classe) # less wordy than confusionMatrix
+table(predF, crossValidation$classe)
+```
+
+The prediction results are almost perfect on the cross-validation set, and I find this really strange, but then several other students reported excellent accuracies. Anyways the LDA is slighlty more perfect than the random forest, so we use this for prediction. The out-of-sample error can be estimated by:
+
+```{r}
+predFF <- predict(trainLDA, outOfSample)$class
+table(predFF, outOfSample$classe)
+```
+
+We then get the values for the submission in the format requested. Again, strangely, all the predictions are for class A, although I would expect the test set to have all the classes. This probably points to an error in my analysis, but I ran out of time to investigate it.
+
+```{r}
+predFsubmission <- predict(trainLDA, testingSubmission2)$class
+
+pml_write_files = function(x){
+  n = length(x)
+  for(i in 1:n){
+    filename = paste0("problem_id_",i,".txt")
+    write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+  }
+}
+
+pml_write_files(predFsubmission)
+```
+
+
+
