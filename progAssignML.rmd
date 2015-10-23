@@ -2,7 +2,7 @@
 title: "Programming Assignment for the Practical Machine Learning course"
 author: "Saskia Bosma"
 date: "20 Oct 2015"
-output: html_document
+output: pdf_document
 ---
 
 This report uses the data from: Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013. It can be found at <http://groupware.les.inf.puc-rio.br/har#wle_paper_section#ixzz3p8ujiAbu>.
